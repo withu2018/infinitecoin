@@ -19,9 +19,12 @@
 
 #include <string>
 #include <vector>
+
 #include "bignum.h"
 #include "key.h"
 #include "script.h"
+#include "allocators.h"
+
 
 static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -34,7 +37,7 @@ inline std::string EncodeBase58(const unsigned char* pbegin, const unsigned char
 
     // Convert big endian data to little endian
     // Extra zero at the end make sure bignum will interpret as a positive number
-    std::vector<unsigned char> vchTmp(pend-pbegin+1, 0);
+    std::vector<unsigned char> vchTmp(pend - pbegin + 1, 0);
     reverse_copy(pbegin, pend, vchTmp.begin());
 
     // Convert little endian data to bignum
@@ -50,7 +53,7 @@ inline std::string EncodeBase58(const unsigned char* pbegin, const unsigned char
     CBigNum rem;
     while (bn > bn0)
     {
-        if (!BN_div(dv.get(), rem.get(), bn.getc(), bn58.getc(), pctx))
+        if (!BN_div(dv.get(), rem.get(), bn.get(), bn58.get(), pctx))
             throw bignum_error("EncodeBase58 : BN_div failed");
         bn = dv;
         unsigned int c = rem.getulong();
@@ -97,7 +100,7 @@ inline bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
             break;
         }
         bnChar.setulong(p1 - pszBase58);
-        if (!BN_mul(bn.get(), bn.getc(), bn58.getc(), pctx))
+        if (!BN_mul(bn.get(), bn.get(), bn58.get(), pctx))
             throw bignum_error("DecodeBase58 : BN_mul failed");
         bn += bnChar;
     }
@@ -107,7 +110,7 @@ inline bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
 
     // Trim off sign byte if present
     if (vchTmp.size() >= 2 && vchTmp.end()[-1] == 0 && vchTmp.end()[-2] >= 0x80)
-        vchTmp.erase(vchTmp.end()-1);
+        vchTmp.erase(vchTmp.end() - 1);
 
     // Restore leading zeros
     int nLeadingZeros = 0;
@@ -151,13 +154,13 @@ inline bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRe
         vchRet.clear();
         return false;
     }
-    uint256 hash = Hash(vchRet.begin(), vchRet.end()-4);
+    uint256 hash = Hash(vchRet.begin(), vchRet.end() - 4);
     if (memcmp(&hash, &vchRet.end()[-4], 4) != 0)
     {
         vchRet.clear();
         return false;
     }
-    vchRet.resize(vchRet.size()-4);
+    vchRet.resize(vchRet.size() - 4);
     return true;
 }
 
@@ -180,19 +183,13 @@ protected:
     unsigned char nVersion;
 
     // the actually encoded data
-    std::vector<unsigned char> vchData;
+    typedef std::vector<unsigned char, zero_after_free_allocator<unsigned char> > vector_uchar;
+    vector_uchar vchData;
 
     CBase58Data()
     {
         nVersion = 0;
         vchData.clear();
-    }
-
-    ~CBase58Data()
-    {
-        // zero the memory, as it may contain sensitive data
-        if (!vchData.empty())
-            memset(&vchData[0], 0, vchData.size());
     }
 
     void SetData(int nVersionIn, const void* pdata, size_t nSize)
@@ -223,7 +220,7 @@ public:
         vchData.resize(vchTemp.size() - 1);
         if (!vchData.empty())
             memcpy(&vchData[0], &vchTemp[1], vchData.size());
-        memset(&vchTemp[0], 0, vchTemp.size());
+        OPENSSL_cleanse(&vchTemp[0], vchData.size());
         return true;
     }
 
@@ -248,11 +245,26 @@ public:
         return 0;
     }
 
-    bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
-    bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
-    bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
-    bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
-    bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
+    bool operator==(const CBase58Data& b58) const
+    {
+        return CompareTo(b58) == 0;
+    }
+    bool operator<=(const CBase58Data& b58) const
+    {
+        return CompareTo(b58) <= 0;
+    }
+    bool operator>=(const CBase58Data& b58) const
+    {
+        return CompareTo(b58) >= 0;
+    }
+    bool operator< (const CBase58Data& b58) const
+    {
+        return CompareTo(b58) <  0;
+    }
+    bool operator> (const CBase58Data& b58) const
+    {
+        return CompareTo(b58) >  0;
+    }
 };
 
 /** base58-encoded Bitcoin addresses.
@@ -284,12 +296,14 @@ public:
         SCRIPT_ADDRESS_TEST = 196,
     };
 
-    bool Set(const CKeyID &id) {
+    bool Set(const CKeyID &id)
+    {
         SetData(fTestNet ? PUBKEY_ADDRESS_TEST : PUBKEY_ADDRESS, &id, 20);
         return true;
     }
 
-    bool Set(const CScriptID &id) {
+    bool Set(const CScriptID &id)
+    {
         SetData(fTestNet ? SCRIPT_ADDRESS_TEST : SCRIPT_ADDRESS, &id, 20);
         return true;
     }
@@ -305,26 +319,26 @@ public:
         bool fExpectTestNet = false;
         switch(nVersion)
         {
-            case PUBKEY_ADDRESS:
-                nExpectedSize = 20; // Hash of public key
-                fExpectTestNet = false;
-                break;
-            case SCRIPT_ADDRESS:
-                nExpectedSize = 20; // Hash of CScript
-                fExpectTestNet = false;
-                break;
+        case PUBKEY_ADDRESS:
+            nExpectedSize = 20; // Hash of public key
+            fExpectTestNet = false;
+            break;
+        case SCRIPT_ADDRESS:
+            nExpectedSize = 20; // Hash of CScript
+            fExpectTestNet = false;
+            break;
 
-            case PUBKEY_ADDRESS_TEST:
-                nExpectedSize = 20;
-                fExpectTestNet = true;
-                break;
-            case SCRIPT_ADDRESS_TEST:
-                nExpectedSize = 20;
-                fExpectTestNet = true;
-                break;
+        case PUBKEY_ADDRESS_TEST:
+            nExpectedSize = 20;
+            fExpectTestNet = true;
+            break;
+        case SCRIPT_ADDRESS_TEST:
+            nExpectedSize = 20;
+            fExpectTestNet = true;
+            break;
 
-            default:
-                return false;
+        default:
+            return false;
         }
         return fExpectTestNet == fTestNet && vchData.size() == nExpectedSize;
     }
@@ -348,18 +362,22 @@ public:
         SetString(pszAddress);
     }
 
-    CTxDestination Get() const {
+    CTxDestination Get() const
+    {
         if (!IsValid())
             return CNoDestination();
-        switch (nVersion) {
+        switch (nVersion)
+        {
         case PUBKEY_ADDRESS:
-        case PUBKEY_ADDRESS_TEST: {
+        case PUBKEY_ADDRESS_TEST:
+        {
             uint160 id;
             memcpy(&id, &vchData[0], 20);
             return CKeyID(id);
         }
         case SCRIPT_ADDRESS:
-        case SCRIPT_ADDRESS_TEST: {
+        case SCRIPT_ADDRESS_TEST:
+        {
             uint160 id;
             memcpy(&id, &vchData[0], 20);
             return CScriptID(id);
@@ -368,37 +386,54 @@ public:
         return CNoDestination();
     }
 
-    bool GetKeyID(CKeyID &keyID) const {
+    bool GetKeyID(CKeyID &keyID) const
+    {
         if (!IsValid())
             return false;
-        switch (nVersion) {
+        switch (nVersion)
+        {
         case PUBKEY_ADDRESS:
-        case PUBKEY_ADDRESS_TEST: {
+        case PUBKEY_ADDRESS_TEST:
+        {
             uint160 id;
             memcpy(&id, &vchData[0], 20);
             keyID = CKeyID(id);
             return true;
         }
-        default: return false;
+        default:
+            return false;
         }
     }
 
-    bool IsScript() const {
+    bool IsScript() const
+    {
         if (!IsValid())
             return false;
-        switch (nVersion) {
+        switch (nVersion)
+        {
         case SCRIPT_ADDRESS:
-        case SCRIPT_ADDRESS_TEST: {
+        case SCRIPT_ADDRESS_TEST:
+        {
             return true;
         }
-        default: return false;
+        default:
+            return false;
         }
     }
 };
 
-bool inline CBitcoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
-bool inline CBitcoinAddressVisitor::operator()(const CScriptID &id) const      { return addr->Set(id); }
-bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const { return false; }
+bool inline CBitcoinAddressVisitor::operator()(const CKeyID &id) const
+{
+    return addr->Set(id);
+}
+bool inline CBitcoinAddressVisitor::operator()(const CScriptID &id) const
+{
+    return addr->Set(id);
+}
+bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const
+{
+    return false;
+}
 
 /** A base58-encoded secret key */
 class CBitcoinSecret : public CBase58Data
@@ -410,21 +445,19 @@ public:
         PRIVKEY_ADDRESS_TEST = CBitcoinAddress::PUBKEY_ADDRESS_TEST + 128,
     };
 
-    void SetSecret(const CSecret& vchSecret, bool fCompressed)
-    { 
-        assert(vchSecret.size() == 32);
-        SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, &vchSecret[0], vchSecret.size());
-        if (fCompressed)
+    void SetKey(const CKey& vchSecret)
+    {
+        assert(vchSecret.IsValid());
+        SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
+        if (vchSecret.IsCompressed())
             vchData.push_back(1);
     }
 
-    CSecret GetSecret(bool &fCompressedOut)
+    CKey GetKey()
     {
-        CSecret vchSecret;
-        vchSecret.resize(32);
-        memcpy(&vchSecret[0], &vchData[0], 32);
-        fCompressedOut = vchData.size() == 33;
-        return vchSecret;
+        CKey ret;
+        ret.Set(&vchData[0], &vchData[32], vchData.size() > 32 && vchData[32] == 1);
+        return ret;
     }
 
     bool IsValid() const
@@ -432,15 +465,15 @@ public:
         bool fExpectTestNet = false;
         switch(nVersion)
         {
-            case PRIVKEY_ADDRESS:
-                break;
+        case PRIVKEY_ADDRESS:
+            break;
 
-            case PRIVKEY_ADDRESS_TEST:
-                fExpectTestNet = true;
-                break;
+        case PRIVKEY_ADDRESS_TEST:
+            fExpectTestNet = true;
+            break;
 
-            default:
-                return false;
+        default:
+            return false;
         }
         return fExpectTestNet == fTestNet && (vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1));
     }
@@ -455,9 +488,9 @@ public:
         return SetString(strSecret.c_str());
     }
 
-    CBitcoinSecret(const CSecret& vchSecret, bool fCompressed)
+    CBitcoinSecret(const CKey& vchSecret)
     {
-        SetSecret(vchSecret, fCompressed);
+        SetKey(vchSecret);
     }
 
     CBitcoinSecret()
@@ -465,4 +498,4 @@ public:
     }
 };
 
-#endif
+#endif // BITCOIN_BASE58_H

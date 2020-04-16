@@ -26,7 +26,10 @@ class CAutoBN_CTX
 {
 protected:
     BN_CTX* pctx;
-    BN_CTX* operator=(BN_CTX* pnew) { return pctx = pnew; }
+    BN_CTX* operator=(BN_CTX* pnew)
+    {
+        return pctx = pnew;
+    }
 
 public:
     CAutoBN_CTX()
@@ -42,10 +45,22 @@ public:
             BN_CTX_free(pctx);
     }
 
-    operator BN_CTX*() { return pctx; }
-    BN_CTX& operator*() { return *pctx; }
-    BN_CTX** operator&() { return &pctx; }
-    bool operator!() { return (pctx == NULL); }
+    operator BN_CTX*()
+    {
+        return pctx;
+    }
+    BN_CTX& operator*()
+    {
+        return *pctx;
+    }
+    BN_CTX** operator&()
+    {
+        return &pctx;
+    }
+    bool operator!()
+    {
+        return (pctx == NULL);
+    }
 };
 
 
@@ -65,8 +80,14 @@ private:
     }
 
 public:
-    BIGNUM *get() { return self; }
-    const BIGNUM *getc() const { return self; }
+    BIGNUM *get()
+    {
+        return self;
+    }
+    const BIGNUM *getc() const
+    {
+        return self;
+    }
 
     CBigNum()
     {
@@ -96,17 +117,65 @@ public:
     }
 
     //CBigNum(char n) is not portable.  Use 'signed char' or 'unsigned char'.
-    CBigNum(signed char n)      { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(short n)            { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(int n)              { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(long n)             { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(int64 n)            { init(); setint64(n); }
-    CBigNum(unsigned char n)    { init(); setulong(n); }
-    CBigNum(unsigned short n)   { init(); setulong(n); }
-    CBigNum(unsigned int n)     { init(); setulong(n); }
-    CBigNum(unsigned long n)    { init(); setulong(n); }
-    CBigNum(uint64 n)           { init(); setuint64(n); }
-    explicit CBigNum(uint256 n) { init(); setuint256(n); }
+    CBigNum(signed char n)
+    {
+        init();
+        if (n >= 0) setulong(n);
+        else setint64(n);
+    }
+    CBigNum(short n)
+    {
+        init();
+        if (n >= 0) setulong(n);
+        else setint64(n);
+    }
+    CBigNum(int n)
+    {
+        init();
+        if (n >= 0) setulong(n);
+        else setint64(n);
+    }
+    CBigNum(long n)
+    {
+        init();
+        if (n >= 0) setulong(n);
+        else setint64(n);
+    }
+    CBigNum(int64 n)
+    {
+        init();
+        setint64(n);
+    }
+    CBigNum(unsigned char n)
+    {
+        init();
+        setulong(n);
+    }
+    CBigNum(unsigned short n)
+    {
+        init();
+        setulong(n);
+    }
+    CBigNum(unsigned int n)
+    {
+        init();
+        setulong(n);
+    }
+    CBigNum(unsigned long n)
+    {
+        init();
+        setulong(n);
+    }
+    CBigNum(uint64 n)
+    {
+        init();
+        setuint64(n);
+    }
+    explicit CBigNum(uint256 n)
+    {
+        init();
+        setuint256(n);
+    }
 
     explicit CBigNum(const std::vector<unsigned char>& vch)
     {
@@ -152,7 +221,9 @@ public:
             n = -(sn + 1);
             ++n;
             fNegative = true;
-        } else {
+        }
+        else
+        {
             n = sn;
             fNegative = false;
         }
@@ -192,7 +263,7 @@ public:
         if (vch.size() > 4)
             vch[4] &= 0x7f;
         uint64 n = 0;
-        for (unsigned int i = 0, j = vch.size()-1; i < sizeof(n) && j >= 4; i++, j--)
+        for (unsigned int i = 0, j = vch.size() - 1; i < sizeof(n) && j >= 4; i++, j--)
             ((unsigned char*)&n)[i] = vch[j];
         return n;
     }
@@ -262,7 +333,7 @@ public:
         if (vch.size() > 4)
             vch[4] &= 0x7f;
         uint256 n = 0;
-        for (unsigned int i = 0, j = vch.size()-1; i < sizeof(n) && j >= 4; i++, j--)
+        for (unsigned int i = 0, j = vch.size() - 1; i < sizeof(n) && j >= 4; i++, j--)
             ((unsigned char*)&n)[i] = vch[j];
         return n;
     }
@@ -338,19 +409,19 @@ public:
             psz++;
 
         // hex string to bignum
-        static const signed char phexdigit[256] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0 };
+        static const signed char phexdigit[256] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         *this = 0;
         while (isxdigit(*psz))
         {
             *this <<= 4;
-            int n = phexdigit[(unsigned char)*psz++];
+            int n = phexdigit[(unsigned char) * psz++];
             *this += n;
         }
         if (fNegative)
             *this = 0 - *this;
     }
 
-    std::string ToString(int nBase=10) const
+    std::string ToString(int nBase = 10) const
     {
         CAutoBN_CTX pctx;
         CBigNum bnBase = nBase;
@@ -381,19 +452,19 @@ public:
         return ToString(16);
     }
 
-    unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) const
+    unsigned int GetSerializeSize(int nType = 0, int nVersion = PROTOCOL_VERSION) const
     {
         return ::GetSerializeSize(getvch(), nType, nVersion);
     }
 
     template<typename Stream>
-    void Serialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION) const
+    void Serialize(Stream& s, int nType = 0, int nVersion = PROTOCOL_VERSION) const
     {
         ::Serialize(s, getvch(), nType, nVersion);
     }
 
     template<typename Stream>
-    void Unserialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION)
+    void Unserialize(Stream& s, int nType = 0, int nVersion = PROTOCOL_VERSION)
     {
         std::vector<unsigned char> vch;
         ::Unserialize(s, vch, nType, nVersion);
@@ -571,11 +642,29 @@ inline const CBigNum operator>>(const CBigNum& a, unsigned int shift)
     return r;
 }
 
-inline bool operator==(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.getc(), b.getc()) == 0); }
-inline bool operator!=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.getc(), b.getc()) != 0); }
-inline bool operator<=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.getc(), b.getc()) <= 0); }
-inline bool operator>=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.getc(), b.getc()) >= 0); }
-inline bool operator<(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(a.getc(), b.getc()) < 0); }
-inline bool operator>(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(a.getc(), b.getc()) > 0); }
+inline bool operator==(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) == 0);
+}
+inline bool operator!=(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) != 0);
+}
+inline bool operator<=(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) <= 0);
+}
+inline bool operator>=(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) >= 0);
+}
+inline bool operator<(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) < 0);
+}
+inline bool operator>(const CBigNum& a, const CBigNum& b)
+{
+    return (BN_cmp(a.getc(), b.getc()) > 0);
+}
 
 #endif

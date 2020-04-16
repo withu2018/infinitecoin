@@ -1,6 +1,7 @@
 #include "overviewpage.h"
 #include "ui_overviewpage.h"
 
+#include "clientmodel.h"
 #include "walletmodel.h"
 #include "bitcoinunits.h"
 #include "optionsmodel.h"
@@ -8,12 +9,9 @@
 #include "transactionfilterproxy.h"
 #include "guiutil.h"
 #include "guiconstants.h"
-#include "version.h"
-
 
 #include <QAbstractItemDelegate>
 #include <QPainter>
-#include <QString>
 
 #define DECORATION_SIZE 64
 #define NUM_ITEMS 3
@@ -48,10 +46,10 @@ public:
         bool confirmed = index.data(TransactionTableModel::ConfirmedRole).toBool();
         QVariant value = index.data(Qt::ForegroundRole);
         QColor foreground = option.palette.color(QPalette::Text);
-        
-        if(value.canConvert<QColor>())
+        if(value.canConvert<QBrush>())
         {
-            foreground = qvariant_cast<QColor>(value);
+            QBrush brush = qvariant_cast<QBrush>(value);
+            foreground = brush.color();
         }
 
         painter->setPen(foreground);
@@ -96,6 +94,8 @@ public:
 OverviewPage::OverviewPage(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::OverviewPage),
+    clientModel(0),
+    walletModel(0),
     currentBalance(-1),
     currentUnconfirmedBalance(-1),
     currentImmatureBalance(-1),
@@ -113,10 +113,9 @@ OverviewPage::OverviewPage(QWidget *parent) :
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 
     // init "out of sync" warning labels
-    ui->labelWalletStatus->setText("(" + tr("Out of sync") + ")");
-    ui->labelTransactionsStatus->setText("(" + tr("Out of sync") + ")");
+    ui->labelWalletStatus->setText("(" + tr("out of sync") + ")");
+    ui->labelTransactionsStatus->setText("(" + tr("out of sync") + ")");
 
-    ui->label_7->setVisible(false);
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
 }
@@ -134,7 +133,7 @@ OverviewPage::~OverviewPage()
 
 void OverviewPage::setBalance(qint64 balance, qint64 unconfirmedBalance, qint64 immatureBalance)
 {
-    int unit = model->getOptionsModel()->getDisplayUnit();
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
     currentBalance = balance;
     currentUnconfirmedBalance = unconfirmedBalance;
     currentImmatureBalance = immatureBalance;
@@ -149,14 +148,20 @@ void OverviewPage::setBalance(qint64 balance, qint64 unconfirmedBalance, qint64 
     ui->labelImmatureText->setVisible(showImmature);
 }
 
-void OverviewPage::setNumTransactions(int count)
+void OverviewPage::setClientModel(ClientModel *model)
 {
-    ui->labelNumTransactions->setText(QLocale::system().toString(count));
+    this->clientModel = model;
+    if(model)
+    {
+        // Show warning if this is a prerelease version
+        connect(model, SIGNAL(alertsChanged(QString)), this, SLOT(updateAlerts(QString)));
+        updateAlerts(model->getStatusBarWarnings());
+    }
 }
 
-void OverviewPage::setModel(WalletModel *model)
+void OverviewPage::setWalletModel(WalletModel *model)
 {
-    this->model = model;
+    this->walletModel = model;
     if(model && model->getOptionsModel())
     {
         // Set up transaction list
@@ -174,9 +179,6 @@ void OverviewPage::setModel(WalletModel *model)
         setBalance(model->getBalance(), model->getUnconfirmedBalance(), model->getImmatureBalance());
         connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64)));
 
-        setNumTransactions(model->getNumTransactions());
-        connect(model, SIGNAL(numTransactionsChanged(int)), this, SLOT(setNumTransactions(int)));
-
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
     }
 
@@ -186,32 +188,22 @@ void OverviewPage::setModel(WalletModel *model)
 
 void OverviewPage::updateDisplayUnit()
 {
-
-// CLIENT_VERSION_MAJOR       1
-// CLIENT_VERSION_MINOR       9
-// CLIENT_VERSION_REVISION    1
-// CLIENT_VERSION_BUILD       4
-
-QString qs;
-
-qs=QString("<html><head/><body><p><a href='https://www.ifc123.net/archives/108.html'><span style='text-decoration: underline; color:#0000ff;'>Version:%1.%2.%3.%4(%5)</span></a></p></body></html>").arg(CLIENT_VERSION_MAJOR ).arg(CLIENT_VERSION_MINOR).arg(CLIENT_VERSION_REVISION).arg(CLIENT_VERSION_BUILD).arg(QString::fromStdString( CLIENT_NAME));
-
-
-     ui->label_8->setText(qs);
-    if(model && model->getOptionsModel())
+    if(walletModel && walletModel->getOptionsModel())
     {
-
-        ui->label_7->setVisible(model->getOptionsModel()->getShowCommunityLinks());
-        ui->label_8->setVisible(model->getOptionsModel()->getShowCommunityLinks());
-
         if(currentBalance != -1)
             setBalance(currentBalance, currentUnconfirmedBalance, currentImmatureBalance);
 
         // Update txdelegate->unit with the current unit
-        txdelegate->unit = model->getOptionsModel()->getDisplayUnit();
+        txdelegate->unit = walletModel->getOptionsModel()->getDisplayUnit();
 
         ui->listTransactions->update();
     }
+}
+
+void OverviewPage::updateAlerts(const QString &warnings)
+{
+    this->ui->labelAlerts->setVisible(!warnings.isEmpty());
+    this->ui->labelAlerts->setText(warnings);
 }
 
 void OverviewPage::showOutOfSyncWarning(bool fShow)

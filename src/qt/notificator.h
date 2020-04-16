@@ -15,6 +15,7 @@ QT_END_NAMESPACE
 class Notificator: public QObject
 {
     Q_OBJECT
+
 public:
     /** Create a new notificator.
        @note Ownership of trayIcon is not transferred to this object.
@@ -27,7 +28,7 @@ public:
     {
         Information,         /**< Informational message */
         Warning,             /**< Notify user of potential problem */
-        Critical             /**< An error occured */
+        Critical        /**< An error occurred */
     };
 
 public slots:
@@ -50,7 +51,8 @@ private:
         Freedesktop, /**< Use DBus org.freedesktop.Notifications */
         QSystemTray, /**< Use QSystemTray::showMessage */
         Growl12,        /**< Use the Growl 1.2 notification system (Mac only) */
-        Growl13        /**< Use the Growl 1.3 notification system (Mac only) */
+        Growl13,                    /**< Use the Growl 1.3 notification system (Mac only) */
+        UserNotificationCenter      /**< Use the 10.8+ User Notification Center (Mac only) */
     };
     QString programName;
     Mode mode;
@@ -61,8 +63,9 @@ private:
     void notifyDBus(Class cls, const QString &title, const QString &text, const QIcon &icon, int millisTimeout);
 #endif
     void notifySystray(Class cls, const QString &title, const QString &text, const QIcon &icon, int millisTimeout);
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     void notifyGrowl(Class cls, const QString &title, const QString &text, const QIcon &icon);
+    void notifyMacUserNotificationCenter(Class cls, const QString &title, const QString &text, const QIcon &icon);
 #endif
 };
 

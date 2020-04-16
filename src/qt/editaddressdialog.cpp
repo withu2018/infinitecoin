@@ -27,7 +27,7 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
         break;
     case EditReceivingAddress:
         setWindowTitle(tr("Edit receiving address"));
-        ui->addressEdit->setDisabled(true);
+        ui->addressEdit->setEnabled(false);
         ui->addressEdit->setPlaceholderText("");
         break;
     case EditSendingAddress:
@@ -48,6 +48,9 @@ EditAddressDialog::~EditAddressDialog()
 void EditAddressDialog::setModel(AddressTableModel *model)
 {
     this->model = model;
+    if(!model)
+        return;
+
     mapper->setModel(model);
     mapper->addMapping(ui->labelEdit, AddressTableModel::Label);
     mapper->addMapping(ui->addressEdit, AddressTableModel::Address);
@@ -99,17 +102,17 @@ void EditAddressDialog::accept()
             QMessageBox::warning(this, windowTitle(),
                 tr("The entered address \"%1\" is not a valid Infinitecoin address.").arg(ui->addressEdit->text()),
                 QMessageBox::Ok, QMessageBox::Ok);
-            return;
+            break;
         case AddressTableModel::WALLET_UNLOCK_FAILURE:
             QMessageBox::critical(this, windowTitle(),
                 tr("Could not unlock wallet."),
                 QMessageBox::Ok, QMessageBox::Ok);
-            return;
+            break;
         case AddressTableModel::KEY_GENERATION_FAILURE:
             QMessageBox::critical(this, windowTitle(),
                 tr("New key generation failed."),
                 QMessageBox::Ok, QMessageBox::Ok);
-            return;
+            break;
         case AddressTableModel::OK:
             // Failed with unknown reason. Just reject.
             break;

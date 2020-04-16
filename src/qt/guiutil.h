@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QMessageBox>
 
+class SendCoinsRecipient;
+
 QT_BEGIN_NAMESPACE
 class QFont;
 class QLineEdit;
@@ -13,7 +15,6 @@ class QDateTime;
 class QUrl;
 class QAbstractItemView;
 QT_END_NAMESPACE
-class SendCoinsRecipient;
 
 /** Utility functions used by the Infinitecoin Qt UI.
  */
@@ -46,8 +47,10 @@ namespace GUIUtil
        @see  TransactionView::copyLabel, TransactionView::copyAmount, TransactionView::copyAddress
      */
     void copyEntryData(QAbstractItemView *view, int column, int role=Qt::EditRole);
-
-    /** Get save file name, mimics QFileDialog::getSaveFileName, except that it appends a default suffix
+    
+    void setClipboard(const QString& str);
+    
+    /** Get save filename, mimics QFileDialog::getSaveFileName, except that it appends a default suffix
         when no suffix is provided by the user.
 
       @param[in] parent  Parent window (or 0)

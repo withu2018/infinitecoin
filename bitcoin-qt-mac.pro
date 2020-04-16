@@ -22,6 +22,7 @@ OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
 
+
 # platform specific defaults, if not overridden on command line
 isEmpty(BOOST_LIB_SUFFIX) {
     BOOST_LIB_SUFFIX = -mt
@@ -67,6 +68,8 @@ isEmpty(MINIUPNPC_INCLUDE_PATH) {
     MINIUPNPC_INCLUDE_PATH = /usr/local/Cellar/miniupnpc/2.1/include
 }
 
+INCLUDEPATH +=$$PWD/leveldb/include
+LIBS +=$$PWD/leveldb/build/libleveldb.a
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
@@ -83,8 +86,7 @@ contains(RELEASE, 1) {
     # Exclude on Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
     # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 
-# for extra security (see: https://wiki.debian.org/Hardening): this flag is GCC compiler-specific
-QMAKE_CXXFLAGS *= -D_FORTIFY_SOURCE=2
+QMAKE_CXXFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -121,7 +123,7 @@ contains(USE_DBUS, 1) {
 # use: qmake "USE_IPV6=1" ( enabled by default; default)
 #  or: qmake "USE_IPV6=0" (disabled by default)
 #  or: qmake "USE_IPV6=-" (not supported)
-contains(USE_IPV6, 0) {
+contains(USE_IPV6, -) {
     message(Building without IPv6 support)
 } else {
     count(USE_IPV6, 0) {
@@ -155,22 +157,25 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
     src/qt/sendcoinsdialog.h \
+    src/qt/coincontroldialog.h \
+    src/qt/coincontroltreewidget.h \
     src/qt/addressbookpage.h \
     src/qt/signverifymessagedialog.h \
     src/qt/aboutdialog.h \
     src/qt/editaddressdialog.h \
     src/qt/bitcoinaddressvalidator.h \
+    src/alert.h \
     src/addrman.h \
     src/base58.h \
     src/bignum.h \
     src/checkpoints.h \
-    src/checkpointsync.h \
+    src/coincontrol.h \
     src/compat.h \
     src/sync.h \
     src/util.h \
+    src/hash.h \
     src/uint256.h \
     src/serialize.h \
-    src/strlcpy.h \
     src/main.h \
     src/net.h \
     src/key.h \
@@ -178,8 +183,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/init.h \
-    src/irc.h \
+    src/bloom.h \
     src/mruset.h \
+    src/checkqueue.h \
     src/json/json_spirit_writer_template.h \
     src/json/json_spirit_writer.h \
     src/json/json_spirit_value.h \
@@ -203,6 +209,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
+    src/qt/walletview.h \
+    src/qt/walletstack.h \
+    src/qt/walletframe.h \
     src/bitcoinrpc.h \
     src/qt/overviewpage.h \
     src/qt/csvmodelwriter.h \
@@ -214,42 +223,50 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/askpassphrasedialog.h \
     src/protocol.h \
     src/qt/notificator.h \
-    src/qt/qtipcserver.h \
+    src/qt/paymentserver.h \
     src/allocators.h \
     src/ui_interface.h \
+    src/qt/rpcconsole.h \
     src/scrypt.h \
-    src/qt/miningpage.h \
     src/version.h \
-    src/qt/rpcconsole.h
+    src/netbase.h \
+    src/clientversion.h \
+    src/txdb.h \
+    src/leveldb.h \
+    src/threadsafety.h \
+    src/limitedmap.h \
+    src/qt/macnotificationhandler.h \
+    src/qt/splashscreen.h
 
-SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
+SOURCES += src/qt/bitcoin.cpp \
+    src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
     src/qt/addresstablemodel.cpp \
     src/qt/optionsdialog.cpp \
     src/qt/sendcoinsdialog.cpp \
+    src/qt/coincontroldialog.cpp \
+    src/qt/coincontroltreewidget.cpp \
     src/qt/addressbookpage.cpp \
     src/qt/signverifymessagedialog.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
+    src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/util.cpp \
+    src/hash.cpp \
     src/netbase.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
     src/init.cpp \
     src/net.cpp \
-    src/irc.cpp \
+    src/bloom.cpp \
     src/checkpoints.cpp \
-    src/checkpointsync.cpp \
     src/addrman.cpp \
     src/db.cpp \
     src/walletdb.cpp \
-    src/json/json_spirit_writer.cpp \
-    src/json/json_spirit_value.cpp \
-    src/json/json_spirit_reader.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
     src/qt/transactionrecord.cpp \
@@ -264,9 +281,15 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
     src/qt/walletmodel.cpp \
+    src/qt/walletview.cpp \
+    src/qt/walletstack.cpp \
+    src/qt/walletframe.cpp \
     src/bitcoinrpc.cpp \
     src/rpcdump.cpp \
     src/rpcnet.cpp \
+    src/rpcmining.cpp \
+    src/rpcwallet.cpp \
+    src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/qt/overviewpage.cpp \
     src/qt/csvmodelwriter.cpp \
@@ -278,17 +301,18 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/askpassphrasedialog.cpp \
     src/protocol.cpp \
     src/qt/notificator.cpp \
-    src/qt/qtipcserver.cpp \
+    src/qt/paymentserver.cpp \
     src/qt/rpcconsole.cpp \
-    src/scrypt.c \
-    src/qt/miningpage.cpp \
-    src/noui.cpp
+    src/scrypt.cpp \
+    src/noui.cpp \
+    src/leveldb.cpp \
+    src/txdb.cpp \
+    src/qt/splashscreen.cpp
 
-RESOURCES += \
-    src/qt/bitcoin.qrc
+RESOURCES += src/qt/bitcoin.qrc
 
-FORMS += \
-    src/qt/forms/sendcoinsdialog.ui \
+FORMS += src/qt/forms/sendcoinsdialog.ui \
+    src/qt/forms/coincontroldialog.ui \
     src/qt/forms/addressbookpage.ui \
     src/qt/forms/signverifymessagedialog.ui \
     src/qt/forms/aboutdialog.ui \
@@ -298,7 +322,6 @@ FORMS += \
     src/qt/forms/sendcoinsentry.ui \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
-    src/qt/forms/miningpage.ui \
     src/qt/forms/optionsdialog.ui
 
 contains(USE_QRCODE, 1) {
@@ -318,6 +341,14 @@ DEFINES += BITCOIN_QT_TEST
   CONFIG -= app_bundle
 }
 
+contains(USE_SSE2, 1) {
+DEFINES += USE_SSE2
+gccsse2.input  = SOURCES_SSE2
+gccsse2.output = $$PWD/build/${QMAKE_FILE_BASE}.o
+gccsse2.commands = $(CXX) -c $(CXXFLAGS) $(INCPATH) -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_NAME} -msse2 -mstackrealign
+QMAKE_EXTRA_COMPILERS += gccsse2
+SOURCES_SSE2 += src/scrypt-sse2.cpp
+}
 
 # Todo: Remove this line when switching to Qt5, as that option was removed
 CODECFORTR = UTF-8

@@ -19,7 +19,7 @@ AskPassphraseDialog::AskPassphraseDialog(Mode mode, QWidget *parent) :
     ui->passEdit1->setMaxLength(MAX_PASSPHRASE_SIZE);
     ui->passEdit2->setMaxLength(MAX_PASSPHRASE_SIZE);
     ui->passEdit3->setMaxLength(MAX_PASSPHRASE_SIZE);
-    
+
     // Setup Caps Lock detection.
     ui->passEdit1->installEventFilter(this);
     ui->passEdit2->installEventFilter(this);
@@ -108,7 +108,16 @@ void AskPassphraseDialog::accept()
                 if(model->setWalletEncrypted(true, newpass1))
                 {
                     QMessageBox::warning(this, tr("Wallet encrypted"),
-                                         tr("Infinitecoin will close now to finish the encryption process. Remember that encrypting your wallet cannot fully protect your infinitecoins from being stolen by malware infecting your computer."));
+                                         "<qt>" +
+                                         tr("Infinitecoin will close now to finish the encryption process. "
+                                         "Remember that encrypting your wallet cannot fully protect "
+                                         "your litecoins from being stolen by malware infecting your computer.") +
+                                         "<br><br><b>" +
+                                         tr("IMPORTANT: Any previous backups you have made of your wallet file "
+                                         "should be replaced with the newly generated, encrypted wallet file. "
+                                         "For security reasons, previous backups of the unencrypted wallet file "
+                                         "will become useless as soon as you start using the new, encrypted wallet.") +
+                                         "</b></qt>");
                     QApplication::quit();
                 }
                 else
@@ -177,7 +186,7 @@ void AskPassphraseDialog::accept()
 
 void AskPassphraseDialog::textChanged()
 {
-    // Validate input, set Ok button to enabled when accepable
+    // Validate input, set Ok button to enabled when acceptable
     bool acceptable = false;
     switch(mode)
     {
@@ -212,7 +221,7 @@ bool AskPassphraseDialog::event(QEvent *event)
     return QWidget::event(event);
 }
 
-bool AskPassphraseDialog::eventFilter(QObject *, QEvent *event)
+bool AskPassphraseDialog::eventFilter(QObject *object, QEvent *event)
 {
     /* Detect Caps Lock.
      * There is no good OS-independent way to check a key state in Qt, but we
@@ -226,7 +235,7 @@ bool AskPassphraseDialog::eventFilter(QObject *, QEvent *event)
         if (str.length() != 0) {
             const QChar *psz = str.unicode();
             bool fShift = (ke->modifiers() & Qt::ShiftModifier) != 0;
-            if ((fShift && psz->isLower()) || (!fShift && psz->isUpper())) {
+            if ((fShift && *psz >= 'a' && *psz <= 'z') || (!fShift && *psz >= 'A' && *psz <= 'Z')) {
                 fCapsLock = true;
                 ui->capsLabel->setText(tr("Warning: The Caps Lock key is on."));
             } else if (psz->isLetter()) {
@@ -235,5 +244,5 @@ bool AskPassphraseDialog::eventFilter(QObject *, QEvent *event)
             }
         }
     }
-    return false;
+    return QDialog::eventFilter(object, event);
 }

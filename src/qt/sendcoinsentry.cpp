@@ -1,5 +1,10 @@
+// Copyright (c) 2011-2013 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "sendcoinsentry.h"
 #include "ui_sendcoinsentry.h"
+
 #include "guiutil.h"
 #include "bitcoinunits.h"
 #include "addressbookpage.h"
@@ -9,8 +14,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QTime>
-
 
 SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
     QFrame(parent),
@@ -19,13 +22,13 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
 {
     ui->setupUi(this);
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     ui->payToLayout->setSpacing(4);
 #endif
 #if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
-    ui->payTo->setPlaceholderText(tr("Enter a Infinitecoin address (starts with i)"));
+    ui->payTo->setPlaceholderText(tr("Enter a Infinitecoin address (e.g. iJezcDAnUHjYrWkBRBZMaEuYTvGqUz1TM3)"));
 #endif
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
@@ -74,6 +77,8 @@ void SendCoinsEntry::setModel(WalletModel *model)
     if(model && model->getOptionsModel())
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 
+    connect(ui->payAmount, SIGNAL(textChanged()), this, SIGNAL(payAmountChanged()));
+
     clear();
 }
 
@@ -88,7 +93,7 @@ void SendCoinsEntry::clear()
     ui->addAsLabel->clear();
     ui->payAmount->clear();
     ui->payTo->setFocus();
-    // update the display unit, to not use the default ("BTC")
+    // update the display unit, to not use the default ("IFC")
     updateDisplayUnit();
 }
 
@@ -123,7 +128,6 @@ bool SendCoinsEntry::validate()
         retval = false;
     }
 
-    calcFee();
     return retval;
 }
 
@@ -134,7 +138,7 @@ SendCoinsRecipient SendCoinsEntry::getValue()
     rv.address = ui->payTo->text();
     rv.label = ui->addAsLabel->text();
     rv.amount = ui->payAmount->value();
-    calcFee();
+
     return rv;
 }
 
@@ -153,7 +157,12 @@ void SendCoinsEntry::setValue(const SendCoinsRecipient &value)
     ui->payTo->setText(value.address);
     ui->addAsLabel->setText(value.label);
     ui->payAmount->setValue(value.amount);
-    calcFee();
+}
+
+void SendCoinsEntry::setAddress(const QString &address)
+{
+    ui->payTo->setText(address);
+    ui->payAmount->setFocus();
 }
 
 bool SendCoinsEntry::isClear()
@@ -172,26 +181,5 @@ void SendCoinsEntry::updateDisplayUnit()
     {
         // Update payAmount with the current unit
         ui->payAmount->setDisplayUnit(model->getOptionsModel()->getDisplayUnit());
-        calcFee();
     }
-}
-
-void SendCoinsEntry::calcFee(){
-     long long COIN = 100000000;
-    if(ui->payAmount->value()>0){
-        long long i=ui->payAmount->value()*0.002;
-        if(i>10000*COIN){
-            i=10000*COIN;
-        }else if(i<=0.01*COIN){
-            i=0.01*COIN;
-        }
-        ui->fee_calc->setText(tr("Fee:")+QString::number((((float)(i*10000/COIN))/10000.0),'f',4)+" IFC");
-    }else{
-        ui->fee_calc->setText(tr("Fee:")+QString::number(0)+" IFC");
-    }
-}
-
-void SendCoinsEntry::on_pushButton_feeCalc_clicked()
-{
-    calcFee();
 }
